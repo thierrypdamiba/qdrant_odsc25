@@ -1,0 +1,191 @@
+"""Document processing service - upload, extraction, chunking, embedding"""
+import os
+import uuid
+from typing import List, Dict, Any, Optional, BinaryIO
+from datetime import datetime
+import PyPDF2
+import docx
+import pdfplumber
+from pathlib import Path
+
+
+class DocumentProcessor:
+    """Handle document upload, text extraction, and chunking"""
+    
+    def __init__(self, upload_dir: str = "./uploads"):
+        self.upload_dir = Path(upload_dir)
+        self.upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    def save_file(self, file_content: bytes, filename: str) -> str:
+        """Save uploaded file and return file path"""
+        doc_id = str(uuid.uuid4())
+        doc_dir = self.upload_dir / doc_id
+        doc_dir.mkdir(parents=True, exist_ok=True)
+        
+        file_path = doc_dir / filename
+        with open(file_path, "wb") as f:
+            f.write(file_content)
+        
+        return doc_id, str(file_path)
+    
+    def extract_text(self, file_path: str, file_type: str) -> str:
+        """Extract text from document based on file type"""
+        if file_type == "pdf":
+            return self._extract_text_pdf(file_path)
+        elif file_type in ["docx", "doc"]:
+            return self._extract_text_docx(file_path)
+        elif file_type in ["txt", "md"]:
+            return self._extract_text_plain(file_path)
+        else:
+            raise ValueError(f"Unsupported file type: {file_type}")
+    
+    def _extract_text_pdf(self, file_path: str) -> str:
+        """Extract text from PDF"""
+        text = ""
+        try:
+            with pdfplumber.open(file_path) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+        except Exception as e:
+            print(f"Error with pdfplumber: {e}, trying PyPDF2")
+            # Fallback to PyPDF2
+            with open(file_path, "rb") as f:
+                pdf_reader = PyPDF2.PdfReader(f)
+                for page in pdf_reader.pages:
+                    text += page.extract_text() + "\n"
+        
+        return text.strip()
+    
+    def _extract_text_docx(self, file_path: str) -> str:
+        """Extract text from DOCX"""
+        doc = docx.Document(file_path)
+        text = "\n".join([para.text for para in doc.paragraphs])
+        return text.strip()
+    
+    def _extract_text_plain(self, file_path: str) -> str:
+        """Extract text from plain text files"""
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            return f.read().strip()
+    
+    def chunk_text(
+        self,
+        text: str,
+        chunk_size: int = 512,
+        overlap: int = 50
+    ) -> List[Dict[str, Any]]:
+        """Split text into overlapping chunks"""
+        # Simple word-based chunking
+        words = text.split()
+        chunks = []
+        
+        if not words:
+            return []
+        
+        for i in range(0, len(words), chunk_size - overlap):
+            chunk_words = words[i:i + chunk_size]
+            chunk_text = " ".join(chunk_words)
+            
+            chunks.append({
+                "text": chunk_text,
+                "chunk_index": len(chunks),
+                "start_word": i,
+                "end_word": i + len(chunk_words)
+            })
+        
+        return chunks
+    
+    def extract_images_from_pdf(self, file_path: str) -> List[Dict[str, Any]]:
+        """Extract images from PDF"""
+        images = []
+        try:
+            with pdfplumber.open(file_path) as pdf:
+                for page_num, page in enumerate(pdf.pages):
+                    page_images = page.images
+                    for img_idx, img in enumerate(page_images):
+                        images.append({
+                            "page": page_num + 1,
+                            "index": img_idx,
+                            "bbox": (img.get("x0"), img.get("top"), img.get("x1"), img.get("bottom"))
+                        })
+        except Exception as e:
+            print(f"Error extracting images: {e}")
+        
+        return images
+
+
+class EmbeddingService:
+    """Generate embeddings for text and images"""
+    
+    def __init__(
+        self,
+        text_model_name: str = "all-MiniLM-L6-v2",
+        image_model_name: str = "openai/clip-vit-base-patch32"
+    ):
+        self.text_model_name = text_model_name
+        self.image_model_name = image_model_name
+        self._text_model = None
+        self._image_model = None
+        self._image_processor = None
+    
+    def _load_text_model(self):
+        """Lazy load text embedding model"""
+        if self._text_model is None:
+            from sentence_transformers import SentenceTransformer
+            self._text_model = SentenceTransformer(self.text_model_name)
+        return self._text_model
+    
+    def _load_image_model(self):
+        """Lazy load image embedding model"""
+        if self._image_model is None:
+            from transformers import CLIPProcessor, CLIPModel
+            self._image_model = CLIPModel.from_pretrained(self.image_model_name)
+            self._image_processor = CLIPProcessor.from_pretrained(self.image_model_name)
+        return self._image_model, self._image_processor
+    
+    def embed_text(self, texts: List[str]) -> List[List[float]]:
+        """Generate embeddings for text"""
+        model = self._load_text_model()
+        embeddings = model.encode(texts, convert_to_numpy=True)
+        return embeddings.tolist()
+    
+    def embed_text_query(self, query: str) -> List[float]:
+        """Generate embedding for a single query"""
+        return self.embed_text([query])[0]
+    
+    def embed_image(self, image_path: str) -> List[float]:
+        """Generate embedding for an image"""
+        from PIL import Image
+        import torch
+        
+        model, processor = self._load_image_model()
+        
+        image = Image.open(image_path)
+        inputs = processor(images=image, return_tensors="pt")
+        
+        with torch.no_grad():
+            image_features = model.get_image_features(**inputs)
+        
+        # Normalize
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+        
+        return image_features.squeeze().tolist()
+    
+    def embed_image_from_text(self, text: str) -> List[float]:
+        """Generate image embedding from text description (for text-to-image search)"""
+        import torch
+        
+        model, processor = self._load_image_model()
+        
+        inputs = processor(text=[text], return_tensors="pt", padding=True)
+        
+        with torch.no_grad():
+            text_features = model.get_text_features(**inputs)
+        
+        # Normalize
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+        
+        return text_features.squeeze().tolist()
+
+
