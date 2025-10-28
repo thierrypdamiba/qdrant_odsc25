@@ -15,28 +15,28 @@ export default function AgentWorkflow({ result }: AgentWorkflowProps) {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">🤖 Agent Workflow</h3>
+      <h3 className="text-lg font-bold mb-4 text-gray-900">🤖 Agent Workflow</h3>
       
       {/* Decision Log */}
       <div className="space-y-2 mb-6">
         {result.decision_log.map((step, idx) => (
           <div key={idx} className="flex items-start gap-2 text-sm">
-            <span className="text-gray-400 font-mono">{idx + 1}.</span>
-            <span className="text-gray-700">{step}</span>
+            <span className="text-gray-900 font-mono font-medium">{idx + 1}.</span>
+            <span className="text-gray-900 font-medium">{step}</span>
           </div>
         ))}
       </div>
 
       {/* Performance Breakdown */}
       {perf && (
-        <div className="border-t pt-4">
-          <h4 className="text-sm font-semibold mb-3 text-gray-700">⏱️ Performance Breakdown</h4>
+        <div className="border-t-2 pt-4">
+          <h4 className="text-sm font-bold mb-3 text-gray-900">⏱️ Performance Breakdown</h4>
           
           <div className="space-y-2">
             {/* Total Time */}
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-900">Total Time</span>
-              <span className="text-sm font-bold text-indigo-600">{perf.total_ms}ms</span>
+              <span className="text-sm font-bold text-gray-900">Total Time</span>
+              <span className="text-sm font-bold text-indigo-700">{perf.total_ms}ms</span>
             </div>
 
             {/* Individual Components */}
@@ -171,11 +171,11 @@ export default function AgentWorkflow({ result }: AgentWorkflowProps) {
                 </div>
               )}
             </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-2 px-1">
-              <span>0ms</span>
-              <span>{(perf.total_ms / 1000).toFixed(1)}s total</span>
+            <div className="flex justify-between text-xs text-gray-900 font-medium mt-2 px-1">
+              <span className="font-bold">0ms</span>
+              <span className="font-bold">{(perf.total_ms / 1000).toFixed(1)}s total</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1 text-center italic">
+            <p className="text-xs text-gray-900 mt-1 text-center font-medium">
               Visual timeline showing component performance (even tiny components visible)
             </p>
           </div>
@@ -208,19 +208,19 @@ function PerformanceBar({
   
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-600 w-40 font-medium">{label}</span>
-      <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+      <span className="text-xs text-gray-900 w-40 font-semibold">{label}</span>
+      <div className="flex-1 bg-gray-200 rounded-full h-6 overflow-hidden border border-gray-300">
         <div
           className={`${color} h-full transition-all duration-300 flex items-center justify-end pr-2`}
           style={{ width: `${Math.max(percentage, 3)}%` }}  // Minimum 3% width for visibility
         >
           {time > 20 && (
-            <span className="text-xs text-white font-medium">{time}ms</span>
+            <span className="text-xs text-white font-bold">{time}ms</span>
           )}
         </div>
       </div>
-      <span className="text-xs text-gray-700 w-24 text-right font-mono">
-        {time}ms <span className="text-gray-500">({formatPercentage(percentage)})</span>
+      <span className="text-xs text-gray-900 w-24 text-right font-mono font-medium">
+        {time}ms <span className="text-gray-900">({formatPercentage(percentage)})</span>
       </span>
     </div>
   );

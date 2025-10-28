@@ -31,7 +31,7 @@ export default function StreamingQueryPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Live Streaming Query</h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-gray-900 font-semibold mt-2">
             Watch the agent work in real-time as it processes your query
           </p>
         </div>

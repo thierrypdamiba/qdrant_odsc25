@@ -31,7 +31,9 @@ class AgenticRAG:
         query: str,
         user: User,
         force_mode: Optional[str] = None,
-        top_k: int = 5
+        top_k: int = 5,
+        use_mmr: bool = False,
+        diversity: float = 0.5
     ) -> Dict[str, Any]:
         """
         Intelligent query processing with automatic routing
@@ -68,6 +70,19 @@ class AgenticRAG:
             total_time = int((time.time() - start_time) * 1000)
             decision_log.append(f"⚡ Cache HIT! (similarity: {cached_result['cache_score']:.3f})")
             decision_log.append(f"✓ Returning cached result ({cached_result.get('cache_age_minutes', 0)} min old)")
+            
+            # Build performance breakdown with cache timing details
+            perf_breakdown = {
+                "total_ms": total_time,
+                "cache_check_ms": perf['cache_check_ms'],
+                "embedding_ms": None,
+                "qdrant_search_ms": None,
+                "context_eval_ms": None,
+                "internet_search_ms": None,
+                "llm_generation_ms": None,
+                "cache_store_ms": None
+            }
+            
             return {
                 **cached_result,
                 "query": query,
@@ -75,10 +90,7 @@ class AgenticRAG:
                 "timestamp": datetime.utcnow(),
                 "decision_log": decision_log,
                 "processing_time_ms": total_time,
-                "performance_breakdown": {
-                    "total_ms": total_time,
-                    "cache_check_ms": perf['cache_check_ms']
-                }
+                "performance_breakdown": perf_breakdown
             }
         
         decision_log.append("❌ Cache MISS - processing query...")
@@ -86,7 +98,7 @@ class AgenticRAG:
         # If user forced a specific mode, use it
         if force_mode and force_mode != "auto":
             decision_log.append(f"👤 User forced mode: {force_mode}")
-            result = await self._execute_mode(force_mode, query, top_k, user)
+            result = await self._execute_mode(force_mode, query, top_k, user, use_mmr, diversity)
             result['decision_log'] = decision_log
             result['agent_decision'] = f"User override: {force_mode}"
             
@@ -113,7 +125,9 @@ class AgenticRAG:
             query,
             top_k,
             filter_classified,
-            return_timing=True
+            return_timing=True,
+            use_mmr=use_mmr,
+            diversity=diversity
         )
         local_total = int((time.time() - local_start) * 1000)
         
@@ -168,7 +182,7 @@ class AgenticRAG:
                 decision_log.append("🔀 Agent Decision: HYBRID (enhancing local with internet)")
                 
                 search_start = time.time()
-                final_result = await self.rag.query_hybrid(query, top_k, filter_classified)
+                final_result = await self.rag.query_hybrid(query, top_k, filter_classified, use_mmr=use_mmr, diversity=diversity)
                 perf['internet_search_ms'] = int((time.time() - search_start) * 1000)
                 
                 decision_log.append(f"   Hybrid search completed ({perf['internet_search_ms']}ms)")
@@ -222,17 +236,19 @@ class AgenticRAG:
         mode: str,
         query: str,
         top_k: int,
-        user: User
+        user: User,
+        use_mmr: bool = False,
+        diversity: float = 0.5
     ) -> Dict[str, Any]:
         """Execute a specific mode"""
         filter_classified = not user.permissions.can_access_classified
         
         if mode == "local":
-            return await self.rag.query_local(query, top_k, filter_classified)
+            return await self.rag.query_local(query, top_k, filter_classified, use_mmr=use_mmr, diversity=diversity)
         elif mode == "internet":
             return await self.rag.query_internet(query, top_k)
         elif mode == "hybrid":
-            return await self.rag.query_hybrid(query, top_k, filter_classified)
+            return await self.rag.query_hybrid(query, top_k, filter_classified, use_mmr=use_mmr, diversity=diversity)
         else:
             raise ValueError(f"Unknown mode: {mode}")
 

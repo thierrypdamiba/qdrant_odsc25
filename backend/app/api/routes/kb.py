@@ -27,7 +27,11 @@ embedding_service = EmbeddingService(
 
 async def get_vector_store() -> QdrantVectorStore:
     """Get vector store instance"""
-    return QdrantVectorStore(settings.qdrant_url, settings.qdrant_api_key)
+    return QdrantVectorStore(
+        settings.qdrant_url, 
+        settings.qdrant_api_key,
+        cloud_inference=settings.qdrant_cloud_inference
+    )
 
 
 async def process_document_background(

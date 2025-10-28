@@ -2,9 +2,10 @@
 
 import { useState, useRef } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { apiClient } from '@/lib/api';
 
 interface StreamEvent {
-  type: 'status' | 'result' | 'error';
+  type: 'status' | 'result' | 'error' | 'decision';
   step?: string;
   message?: string;
   time_ms?: number;
@@ -12,6 +13,9 @@ interface StreamEvent {
   quality?: any;
   mode?: string;
   num_sources?: number;
+  quality_score?: number;
+  quality_reason?: string;
+  suggested_modes?: Array<{ mode: string; reason: string }>;
   [key: string]: any;
 }
 
@@ -28,6 +32,10 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
   const [livePerf, setLivePerf] = useState<any>({});
+  const [useMmr, setUseMmr] = useState(false);
+  const [diversity, setDiversity] = useState(0.5);
+  const [userFeedback, setUserFeedback] = useState<string | null>(null);
+  const [modeSuggestions, setModeSuggestions] = useState<any>(null);
   const abortController = useRef<AbortController | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,6 +47,8 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
     setEvents([]);
     setResult(null);
     setLivePerf({});
+    setUserFeedback(null);
+    setModeSuggestions(null);
 
     // Create abort controller for cancellation
     abortController.current = new AbortController();
@@ -55,6 +65,8 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
           query: query.trim(),
           mode,
           top_k: 5,
+          use_mmr: useMmr,
+          diversity: diversity,
         }),
         signal: abortController.current.signal,
       });
@@ -108,6 +120,11 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
               }));
             }
 
+            // Handle decision events with mode suggestions
+            if (eventType === 'decision' && eventData.suggested_modes) {
+              setModeSuggestions(eventData);
+            }
+
             if (eventType === 'result') {
               setResult(eventData);
               if (onComplete) {
@@ -140,6 +157,21 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
     }
   };
 
+  const handleFeedback = async (feedback: 'thumbs_up' | 'thumbs_down') => {
+    if (!result || !result.query_id) return;
+    
+    setUserFeedback(feedback);
+    
+    try {
+      await apiClient.submitFeedback({
+        query_id: result.query_id,
+        feedback
+      });
+    } catch (err) {
+      console.error('Failed to submit feedback:', err);
+    }
+  };
+
   const permissions = user?.permissions;
 
   return (
@@ -148,14 +180,14 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
       <div className="bg-white rounded-lg shadow p-6">
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="query" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="query" className="block text-sm font-semibold text-gray-900 mb-2">
               Your Question
             </label>
             <textarea
               id="query"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               rows={3}
               placeholder="Ask me anything..."
               required
@@ -164,7 +196,7 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
               Search Mode
             </label>
             <div className="flex flex-wrap gap-3">
@@ -177,7 +209,7 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
                   disabled={streaming}
                   className="mr-2"
                 />
-                <span className="text-sm font-semibold">🤖 Auto (Watch Agent Decide!)</span>
+                <span className="text-sm font-semibold text-gray-900">🤖 Auto (Watch Agent Decide!)</span>
               </label>
               
               <label className="flex items-center">
@@ -189,7 +221,7 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
                   disabled={streaming}
                   className="mr-2"
                 />
-                <span className="text-sm">📚 Local</span>
+                <span className="text-sm text-gray-900 font-semibold">📚 Local</span>
               </label>
               
               <label className={`flex items-center ${!permissions?.can_search_internet ? 'opacity-50' : ''}`}>
@@ -201,7 +233,7 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
                   disabled={!permissions?.can_search_internet || streaming}
                   className="mr-2"
                 />
-                <span className="text-sm">🌐 Internet</span>
+                <span className="text-sm text-gray-900 font-semibold">🌐 Internet</span>
               </label>
               
               <label className={`flex items-center ${!permissions?.can_search_internet ? 'opacity-50' : ''}`}>
@@ -213,9 +245,53 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
                   disabled={!permissions?.can_search_internet || streaming}
                   className="mr-2"
                 />
-                <span className="text-sm">🔀 Hybrid</span>
+                <span className="text-sm text-gray-900 font-semibold">🔀 Hybrid</span>
               </label>
             </div>
+          </div>
+
+          {/* Diversity Toggle */}
+          <div className="mb-4">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useMmr}
+                onChange={(e) => setUseMmr(e.target.checked)}
+                disabled={streaming}
+                className="mr-2 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-sm font-semibold text-gray-900">
+                🎨 Enable Diversity Search (MMR)
+              </span>
+            </label>
+            {useMmr && (
+              <div className="mt-3 ml-7">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Diversity Level: {diversity.toFixed(1)}
+                  <span className="text-xs ml-2 text-gray-600">
+                    ({diversity === 0 ? 'Relevance only' : diversity === 1 ? 'Maximum diversity' : `Balance: ${(diversity * 100).toFixed(0)}% diversity`})
+                  </span>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={diversity}
+                  onChange={(e) => setDiversity(parseFloat(e.target.value))}
+                  disabled={streaming}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="flex justify-between text-xs text-gray-900 font-semibold mt-1">
+                  <span>Relevance</span>
+                  <span>Balanced</span>
+                  <span>Diversity</span>
+                </div>
+                <p className="mt-2 text-xs text-gray-600">
+                  MMR (Maximal Marginal Relevance) balances relevance with diversity. Lower values prioritize similarity to your query, while higher values find more varied results.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2">
@@ -243,7 +319,7 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
       {/* Live Event Stream */}
       {events.length > 0 && (
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
             <span className={streaming ? 'animate-pulse' : ''}>🔴</span>
             Agent Workflow {streaming && '(Live)'}
           </h3>
@@ -251,18 +327,18 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {events.map((event, idx) => (
               <div key={idx} className="flex items-start gap-2 text-sm">
-                <span className="text-gray-400 font-mono text-xs">{idx + 1}.</span>
+                <span className="text-gray-900 font-mono text-xs font-bold">{idx + 1}.</span>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-800">{event.message}</span>
+                    <span className="text-gray-900 font-semibold">{event.message}</span>
                     {event.time_ms !== undefined && (
-                      <span className="text-xs text-indigo-600 font-mono ml-2 font-semibold">
+                      <span className="text-xs text-indigo-600 font-mono ml-2 font-bold">
                         +{event.time_ms}ms
                       </span>
                     )}
                   </div>
                   {event.quality && (
-                    <div className="text-xs text-gray-600 mt-1">
+                    <div className="text-xs text-gray-900 mt-1 font-semibold">
                       Score: {(event.quality.overall_score * 100).toFixed(1)}% 
                       (Vector: {(event.quality.vector_score * 100).toFixed(0)}%, 
                       Coverage: {(event.quality.coverage * 100).toFixed(0)}%, 
@@ -286,14 +362,47 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
       {/* Live Performance Breakdown */}
       {Object.keys(livePerf).length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-black mb-4 flex items-center gap-2">
             ⏱️ Live Performance Metrics
             {streaming && <span className="text-xs text-blue-600 animate-pulse">(Updating...)</span>}
           </h3>
           
           <div className="space-y-3">
-            {livePerf.cache_check_ms !== undefined && (
-              <LivePerformanceBar label="Cache Check" time={livePerf.cache_check_ms} color="bg-purple-500" />
+            {livePerf.cache_hit_ms !== undefined && result?.cached && (
+              <>
+                <LivePerformanceBar label="⚡ Cache Hit (Total)" time={livePerf.cache_hit_ms} color="bg-green-600" highlighted />
+                {result.qdrant_server_ms !== undefined && (
+                  <>
+                    <LivePerformanceBar 
+                      label="  └─ Qdrant Server (total)" 
+                      time={Math.round(result.qdrant_server_ms)} 
+                      color="bg-blue-500" 
+                    />
+                    {result.embedding_est_ms !== undefined && result.embedding_est_ms > 0 && (
+                      <LivePerformanceBar 
+                        label="      ├─ Cloud Embedding (est)" 
+                        time={Math.round(result.embedding_est_ms)} 
+                        color="bg-cyan-400" 
+                      />
+                    )}
+                    {result.search_est_ms !== undefined && result.search_est_ms > 0 && (
+                      <LivePerformanceBar 
+                        label="      └─ Vector Search (est)" 
+                        time={Math.round(result.search_est_ms)} 
+                        color="bg-indigo-400" 
+                      />
+                    )}
+                    <LivePerformanceBar 
+                      label="  └─ Network Round-Trip" 
+                      time={Math.round(result.network_ms || 0)} 
+                      color="bg-gray-500" 
+                    />
+                  </>
+                )}
+              </>
+            )}
+            {livePerf.cache_check_ms !== undefined && !result?.cached && (
+              <LivePerformanceBar label="Cache Check (miss)" time={livePerf.cache_check_ms} color="bg-purple-500" />
             )}
             {livePerf.embedding_done_ms !== undefined && (
               <LivePerformanceBar label="Query Embedding" time={livePerf.embedding_done_ms} color="bg-cyan-500" />
@@ -315,7 +424,7 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
           {result?.processing_time_ms && (
             <div className="mt-4 pt-4 border-t">
               <div className="flex items-center justify-between">
-                <span className="font-semibold">Total Time</span>
+                <span className="font-bold text-black">Total Time</span>
                 <span className="font-bold text-indigo-600 text-lg">{result.processing_time_ms}ms</span>
               </div>
             </div>
@@ -325,27 +434,77 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md">
+        <div className="bg-red-50 border-2 border-red-300 text-red-800 p-4 rounded-md font-medium">
           {error}
+        </div>
+      )}
+
+      {/* Mode Suggestions (when quality is low) */}
+      {modeSuggestions && !streaming && (
+        <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4">
+          <h3 className="text-lg font-bold mb-3 text-gray-900">🎯 Agent Suggested Search Mode</h3>
+          <p className="text-sm text-gray-800 mb-3 font-medium">
+            Quality Score: {(modeSuggestions.quality_score * 100).toFixed(1)}% - {modeSuggestions.quality_reason}
+          </p>
+          <p className="text-sm text-gray-800 mb-3 font-semibold">Agent selected: <span className="font-bold">{modeSuggestions.mode}</span></p>
+          
+          {modeSuggestions.suggested_modes && modeSuggestions.suggested_modes.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-gray-900">Alternative modes:</p>
+              {modeSuggestions.suggested_modes.map((suggestion: any, idx: number) => (
+                <div key={idx} className="text-sm pl-4 border-l-2 border-yellow-400">
+                  <span className="font-bold text-gray-900">{suggestion.mode}:</span> {suggestion.reason}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* Final Result */}
       {result && !streaming && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Answer</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Answer</h2>
+            {/* Feedback Buttons */}
+            <div className="flex gap-2 items-center">
+              <span className="text-sm text-gray-900 font-bold mr-2">Rate:</span>
+              <button
+                onClick={() => handleFeedback('thumbs_up')}
+                className={`p-2 rounded-full transition-colors ${
+                  userFeedback === 'thumbs_up' 
+                    ? 'bg-green-500 text-white' 
+                    : 'bg-gray-100 hover:bg-green-100 text-gray-600'
+                }`}
+                title="Thumbs up - Good answer"
+              >
+                👍
+              </button>
+              <button
+                onClick={() => handleFeedback('thumbs_down')}
+                className={`p-2 rounded-full transition-colors ${
+                  userFeedback === 'thumbs_down' 
+                    ? 'bg-red-500 text-white' 
+                    : 'bg-gray-100 hover:bg-red-100 text-gray-600'
+                }`}
+                title="Thumbs down - Poor answer"
+              >
+                👎
+              </button>
+            </div>
+          </div>
           <div className="prose max-w-none">
-            <p className="text-gray-800 whitespace-pre-wrap">{result.answer}</p>
+            <p className="text-gray-900 whitespace-pre-wrap font-medium">{result.answer}</p>
           </div>
           
           {result.sources && result.sources.length > 0 && (
             <div className="mt-6">
-              <h3 className="font-semibold mb-3">Sources:</h3>
+              <h3 className="font-bold mb-3 text-gray-900">Sources:</h3>
               <div className="space-y-2">
                 {result.sources.map((source: any, idx: number) => (
                   <div key={idx} className="text-sm border-l-2 border-indigo-300 pl-3 py-1">
-                    <div className="font-medium">{source.doc_name}</div>
-                    <div className="text-gray-600 text-xs">{source.chunk_text}</div>
+                    <div className="font-semibold text-gray-900">{source.doc_name}</div>
+                    <div className="text-gray-900 text-xs font-medium">{source.chunk_text}</div>
                   </div>
                 ))}
               </div>
@@ -370,7 +529,7 @@ function LivePerformanceBar({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className={`text-sm w-48 ${highlighted ? 'font-bold' : 'font-medium'} text-gray-700`}>
+      <span className={`text-sm w-48 ${highlighted ? 'font-bold' : 'font-semibold'} text-gray-900`}>
         {label}
       </span>
       <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
@@ -384,7 +543,7 @@ function LivePerformanceBar({
           <span className="text-sm text-white font-bold">{time}ms</span>
         </div>
       </div>
-      <span className={`text-sm font-mono w-20 text-right ${highlighted ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
+      <span className={`text-sm font-mono w-20 text-right ${highlighted ? 'font-bold text-gray-900' : 'font-medium text-gray-900'}`}>
         {time}ms
       </span>
     </div>

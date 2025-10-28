@@ -132,8 +132,13 @@ class EmbeddingService:
     def _load_text_model(self):
         """Lazy load text embedding model"""
         if self._text_model is None:
+            import time
+            load_start = time.time()
             from sentence_transformers import SentenceTransformer
+            print(f"[EMBEDDING] Loading SentenceTransformer model: {self.text_model_name}")
             self._text_model = SentenceTransformer(self.text_model_name)
+            load_time = int((time.time() - load_start) * 1000)
+            print(f"[EMBEDDING] Model loaded in: {load_time}ms")
         return self._text_model
     
     def _load_image_model(self):
@@ -146,8 +151,12 @@ class EmbeddingService:
     
     def embed_text(self, texts: List[str]) -> List[List[float]]:
         """Generate embeddings for text"""
+        import time
         model = self._load_text_model()
+        encode_start = time.time()
         embeddings = model.encode(texts, convert_to_numpy=True)
+        encode_time = int((time.time() - encode_start) * 1000)
+        print(f"[EMBEDDING] Encoding {len(texts)} text(s) took: {encode_time}ms")
         return embeddings.tolist()
     
     def embed_text_query(self, query: str) -> List[float]:

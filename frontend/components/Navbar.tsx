@@ -22,12 +22,12 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <nav className="bg-white shadow-md border-b-2 border-gray-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/dashboard" className="text-xl font-bold text-indigo-600">
+              <Link href="/dashboard" className="text-xl font-bold text-indigo-700 hover:text-indigo-900">
                 Agentic RAG
               </Link>
             </div>
@@ -42,10 +42,10 @@ export default function Navbar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-bold ${
                       isActive
-                        ? 'border-indigo-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                        ? 'border-indigo-700 text-gray-900'
+                        : 'border-transparent text-gray-900 hover:border-gray-400 hover:text-gray-900'
                     }`}
                   >
                     <span className="mr-2">{item.icon}</span>
@@ -59,12 +59,12 @@ export default function Navbar() {
             <div className="flex-shrink-0">
               <div className="flex items-center space-x-4">
                 <div className="text-sm">
-                  <p className="font-medium text-gray-900">{user?.username}</p>
-                  <p className="text-xs text-gray-500">{user?.role}</p>
+                  <p className="font-bold text-gray-900">{user?.username}</p>
+                  <p className="text-xs font-semibold text-gray-900">{user?.role}</p>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex items-center px-4 py-2 border-2 border-indigo-700 text-sm leading-4 font-bold rounded-md text-white bg-indigo-700 hover:bg-indigo-800 hover:border-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
                 >
                   Logout
                 </button>

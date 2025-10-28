@@ -32,12 +32,12 @@ export default function LoginPage() {
       <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Agentic RAG</h1>
-          <p className="text-gray-600 mt-2">Sign in to your account</p>
+          <p className="text-gray-900 font-medium mt-2">Sign in to your account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="username" className="block text-sm font-semibold text-gray-800">
               Username
             </label>
             <input
@@ -45,14 +45,14 @@ export default function LoginPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="mt-1 block w-full px-3 py-2 bg-white text-gray-900 border-2 border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="admin, local_user, or hybrid_user"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="block text-sm font-semibold text-gray-800">
               Password
             </label>
             <input
@@ -60,14 +60,14 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="mt-1 block w-full px-3 py-2 bg-white text-gray-900 border-2 border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="any password"
               required
             />
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+            <div className="bg-red-50 text-red-800 p-3 rounded-md text-sm font-medium border-2 border-red-200">
               {error}
             </div>
           )}
@@ -81,12 +81,12 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-md">
-          <p className="text-xs text-gray-600 font-semibold mb-2">Demo Users:</p>
-          <div className="space-y-1 text-xs text-gray-600">
-            <p><strong>admin</strong> - Full access</p>
-            <p><strong>local_user</strong> - Local search only</p>
-            <p><strong>hybrid_user</strong> - Local + Internet (no classified)</p>
+        <div className="mt-6 p-4 bg-blue-50 rounded-md border-2 border-blue-200">
+          <p className="text-sm text-gray-800 font-bold mb-2">Demo Users:</p>
+          <div className="space-y-1 text-sm text-gray-900">
+            <p><strong className="text-gray-900">admin</strong> - Full access</p>
+            <p><strong className="text-gray-900">local_user</strong> - Local search only</p>
+            <p><strong className="text-gray-900">hybrid_user</strong> - Local + Internet (no classified)</p>
           </div>
         </div>
       </div>

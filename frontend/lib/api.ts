@@ -42,6 +42,8 @@ export interface QueryRequest {
   mode: 'auto' | 'local' | 'internet' | 'hybrid';
   top_k?: number;
   include_images?: boolean;
+  use_mmr?: boolean;
+  diversity?: number;
 }
 
 export interface Source {
@@ -95,6 +97,18 @@ export interface DocumentUploadResponse {
   filename: string;
   status: string;
   message: string;
+}
+
+export interface FeedbackRequest {
+  query_id: string;
+  feedback: 'thumbs_up' | 'thumbs_down';
+  comment?: string;
+}
+
+export interface ModeOverrideRequest {
+  query_id?: string;
+  selected_mode: 'local' | 'internet' | 'hybrid';
+  reason?: string;
 }
 
 class ApiClient {
@@ -216,6 +230,21 @@ class ApiClient {
   // Health check
   async healthCheck() {
     return this.request('/health');
+  }
+
+  // Feedback endpoints
+  async submitFeedback(data: FeedbackRequest) {
+    return this.request('/query/feedback', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async requestModeOverride(data: ModeOverrideRequest) {
+    return this.request('/query/mode-override', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 }
 

@@ -31,15 +31,23 @@ class RAGService:
         query: str,
         top_k: int = 5,
         filter_classified: bool = True,
-        return_timing: bool = False
+        return_timing: bool = False,
+        use_mmr: bool = False,
+        diversity: float = 0.5
     ) -> Dict[str, Any]:
         """Query local knowledge base using RAG"""
         import time
         timings = {}
         
         # Generate query embedding
+        import asyncio
         embed_start = time.time()
-        query_vector = self.embedding_service.embed_text_query(query)
+        loop = asyncio.get_event_loop()
+        query_vector = await loop.run_in_executor(
+            None,
+            self.embedding_service.embed_text_query,
+            query
+        )
         timings['embedding_ms'] = int((time.time() - embed_start) * 1000)
         
         # Search vector store
@@ -57,7 +65,9 @@ class RAGService:
             collection_name=collection_name,
             query_vector=query_vector,
             top_k=top_k,
-            filter_conditions=filter_conditions
+            filter_conditions=filter_conditions,
+            use_mmr=use_mmr,
+            diversity=diversity
         )
         timings['qdrant_search_ms'] = int((time.time() - search_start) * 1000)
         
@@ -160,11 +170,13 @@ Please provide a comprehensive answer based on the search results above."""
         self,
         query: str,
         top_k: int = 5,
-        filter_classified: bool = True
+        filter_classified: bool = True,
+        use_mmr: bool = False,
+        diversity: float = 0.5
     ) -> Dict[str, Any]:
         """Query both local and internet, then fuse results"""
         # Run both queries in parallel (simplified - not truly parallel here)
-        local_result = await self.query_local(query, top_k, filter_classified)
+        local_result = await self.query_local(query, top_k, filter_classified, use_mmr=use_mmr, diversity=diversity)
         internet_result = await self.query_internet(query, top_k)
         
         # Combine sources

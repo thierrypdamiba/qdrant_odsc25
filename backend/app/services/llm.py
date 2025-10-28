@@ -1,8 +1,23 @@
 """Groq LLM service implementation"""
 from typing import AsyncIterator
+from abc import ABC, abstractmethod
 
 
-class GroqLLMService:
+class LLMService(ABC):
+    """Abstract base class for LLM services"""
+    
+    @abstractmethod
+    async def generate(self, prompt: str, system_prompt: str = "") -> str:
+        """Generate a response"""
+        pass
+    
+    @abstractmethod
+    async def generate_stream(self, prompt: str, system_prompt: str = "") -> AsyncIterator[str]:
+        """Generate a streaming response"""
+        pass
+
+
+class GroqLLMService(LLMService):
     """Groq LLM service implementation"""
     
     def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile"):

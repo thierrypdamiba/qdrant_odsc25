@@ -1,8 +1,18 @@
 """Perplexity internet search service implementation"""
 from typing import List, Dict
+from abc import ABC, abstractmethod
 
 
-class PerplexitySearchService:
+class SearchService(ABC):
+    """Abstract base class for search services"""
+    
+    @abstractmethod
+    async def search(self, query: str, num_results: int = 5) -> List[Dict[str, str]]:
+        """Search for information"""
+        pass
+
+
+class PerplexitySearchService(SearchService):
     """Perplexity search service implementation using HTTP API"""
     
     def __init__(self, api_key: str):

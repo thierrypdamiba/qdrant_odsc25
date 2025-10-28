@@ -1,6 +1,6 @@
 """Query routes"""
 from fastapi import APIRouter, Depends, HTTPException, status
-from app.schemas.query import QueryRequest, QueryResponse
+from app.schemas.query import QueryRequest, QueryResponse, FeedbackRequest, ModeOverrideRequest
 from app.core.auth import User
 from app.core.deps import get_current_user
 from app.services.rag import RAGService
@@ -21,9 +21,20 @@ router = APIRouter(prefix="/query", tags=["query"])
 async def get_agent_service() -> AgenticRAG:
     """Get Agentic RAG service with all components"""
     # Initialize real services
-    vector_store = QdrantVectorStore(settings.qdrant_url, settings.qdrant_api_key)
+    vector_store = QdrantVectorStore(
+        settings.qdrant_url, 
+        settings.qdrant_api_key,
+        cloud_inference=settings.qdrant_cloud_inference
+    )
     llm_service = GroqLLMService(settings.groq_api_key)
-    search_service = PerplexitySearchService(settings.perplexity_api_key)
+    
+    # Initialize search service only if API key is available
+    if settings.perplexity_api_key:
+        search_service = PerplexitySearchService(settings.perplexity_api_key)
+    else:
+        # Use mock search service if Perplexity key is not configured
+        from app.services.mock_search import MockSearchService
+        search_service = MockSearchService()
     
     # Embedding service
     embedding_service = EmbeddingService(
@@ -94,10 +105,60 @@ async def query(
         query=request.query,
         user=current_user,
         force_mode=force_mode,
-        top_k=request.top_k
+        top_k=request.top_k,
+        use_mmr=request.use_mmr,
+        diversity=request.diversity
     )
     
     # Return response
     return QueryResponse(**result)
+
+
+@router.post("/feedback")
+async def submit_feedback(
+    feedback: FeedbackRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Submit user feedback on a query result (thumbs up/down)
+    """
+    # TODO: Store feedback in database/cache for analytics
+    # For now, just log it
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"User {current_user.user_id} feedback on query {feedback.query_id}: {feedback.feedback}")
+    if feedback.comment:
+        logger.info(f"Comment: {feedback.comment}")
+    
+    return {
+        "status": "success",
+        "message": "Feedback recorded",
+        "query_id": feedback.query_id
+    }
+
+
+@router.post("/mode-override")
+async def request_mode_override(
+    override: ModeOverrideRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Request to override agent's mode decision during processing
+    """
+    # Check permissions
+    if override.selected_mode in ["internet", "hybrid"]:
+        if not current_user.permissions.can_search_internet:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"You don't have permission to use {override.selected_mode} search"
+            )
+    
+    # TODO: In a real implementation, this would trigger re-query with the new mode
+    # For now, return the mode for the client to use
+    return {
+        "status": "success",
+        "selected_mode": override.selected_mode,
+        "message": f"Mode override requested: {override.selected_mode}"
+    }
 
 
