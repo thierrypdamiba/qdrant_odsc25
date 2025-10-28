@@ -36,19 +36,21 @@ print(f"✓ Connected to {settings.qdrant_url}\n")
 # Step 2: Prepare some sample documents to store
 print("Step 2: Preparing sample documents...")
 print("-" * 60)
+import uuid
+
 documents = [
     {
-        "id": "1",
+        "id": str(uuid.uuid4()),  # Generate UUID
         "text": "Python is a programming language. It is simple and readable.",
         "title": "Python Programming"
     },
     {
-        "id": "2", 
+        "id": str(uuid.uuid4()),  # Generate UUID
         "text": "Machine learning uses algorithms to learn from data.",
         "title": "Machine Learning"
     },
     {
-        "id": "3",
+        "id": str(uuid.uuid4()),  # Generate UUID
         "text": "Neural networks are inspired by how the human brain works.",
         "title": "Neural Networks"
     }

@@ -6,6 +6,36 @@ This guide will walk you through setting up and running the Agentic RAG system f
 
 **IMPORTANT**: For the workshop, please load **only 100 articles** to keep data loading fast and manageable. The workshop cluster is shared, so loading too many articles will slow things down for everyone.
 
+## Setup Method
+
+**We are using Qdrant Cloud (NOT Docker)** for this workshop. All services run locally on your machine while connecting to Qdrant Cloud for vector storage.
+
+## Quick Setup (TL;DR)
+
+If you're familiar with Python/Node projects, here's the condensed version:
+
+```bash
+# 1. Backend setup
+cd backend
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements-workshop.txt
+
+# 2. Create .env file with Qdrant Cloud credentials (see Step 2)
+
+# 3. Load data
+python scripts/load_simple_wikipedia.py
+
+# 4. Start backend (keep running)
+python -m app.main
+
+# 5. Frontend setup (new terminal)
+cd frontend && npm install && npm run dev
+```
+
+Then open http://localhost:3000 and login with any username/password.
+
+For detailed instructions, continue reading below.
+
 ## Prerequisites
 
 - Python 3.8+ installed
@@ -86,8 +116,14 @@ python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt
+# Option 1: Use workshop-optimized requirements (recommended - faster install)
+pip install -r requirements-workshop.txt
+
+# Option 2: Use full requirements (includes everything)
+# pip install -r requirements.txt
 ```
+
+**Note**: The `requirements-workshop.txt` includes only the packages needed for the workshop, making installation faster (~2-3 minutes vs 5-7 minutes).
 
 ## Step 4: Load Sample Data
 

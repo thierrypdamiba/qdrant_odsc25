@@ -218,7 +218,7 @@ async def load_simple_wikipedia(num_articles: int = 1000):
         print("Data is stored IN MEMORY and will be LOST when backend restarts!")
         print()
         print("To persist data:")
-        print("1. Start Qdrant: docker-compose up -d")
+        print("1. Set up Qdrant Cloud (see WORKSHOP_SETUP.md)")
         print("2. Update backend/.env: USE_MOCK_VECTOR_STORE=false")
         print("3. Restart backend and re-run this script")
         print("=" * 70)
