@@ -411,13 +411,21 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
 
       {/* Live Performance Breakdown */}
       {Object.keys(livePerf).length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-bold text-black mb-4 flex items-center gap-2">
-            ⏱️ Live Performance Metrics
-            {streaming && <span className="text-xs text-blue-600 animate-pulse">(Updating...)</span>}
-          </h3>
+        <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl shadow-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+              ⏱️ Performance Metrics
+              {streaming && <span className="text-xs font-normal text-blue-600 animate-pulse bg-blue-50 px-3 py-1 rounded-full">Live</span>}
+            </h3>
+            {result?.cached && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">
+                <span>⚡</span>
+                Cached Response
+              </div>
+            )}
+          </div>
           
-          <div className="space-y-3">
+          <div className="space-y-2">
             {livePerf.cache_hit_ms !== undefined && result?.cached && (
               <>
                 <LivePerformanceBar label="⚡ Cache Hit (Total)" time={livePerf.cache_hit_ms} color="bg-green-600" highlighted />
@@ -472,11 +480,18 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
           </div>
 
           {result?.processing_time_ms && (
-            <div className="mt-4 pt-4 border-t">
+            <div className="mt-6 pt-5 border-t-2 border-gray-200">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-black">Total Time</span>
-                <span className="font-bold text-indigo-600 text-lg">{result.processing_time_ms}ms</span>
+                <span className="font-black text-gray-900 text-lg">Total Time</span>
+                <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600 text-2xl">
+                  {result.processing_time_ms}ms
+                </span>
               </div>
+              {result.cached && (
+                <div className="mt-2 text-sm text-gray-600">
+                  <span className="font-semibold">Cache Age:</span> {result.cache_age_minutes} minutes • <span className="font-semibold">Similarity:</span> {(result.cache_score * 100).toFixed(1)}%
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -513,48 +528,62 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
 
       {/* Final Result */}
       {result && !streaming && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Answer</h2>
+        <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-xl shadow-xl border-2 border-indigo-200 p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+              <span className="text-3xl">✨</span>
+              AI Answer
+            </h2>
             {/* Feedback Buttons */}
-            <div className="flex gap-2 items-center">
-              <span className="text-sm text-gray-900 font-bold mr-2">Rate:</span>
+            <div className="flex gap-3 items-center">
+              <span className="text-sm text-gray-700 font-bold">Rate:</span>
               <button
                 onClick={() => handleFeedback('thumbs_up')}
-                className={`p-2 rounded-full transition-colors ${
+                className={`p-3 rounded-xl transition-all transform hover:scale-110 ${
                   userFeedback === 'thumbs_up' 
-                    ? 'bg-green-500 text-white' 
-                    : 'bg-gray-100 hover:bg-green-100 text-gray-600'
+                    ? 'bg-green-500 text-white shadow-lg' 
+                    : 'bg-gray-100 hover:bg-green-100 text-gray-700 hover:shadow-md'
                 }`}
                 title="Thumbs up - Good answer"
               >
-                👍
+                <span className="text-xl">👍</span>
               </button>
               <button
                 onClick={() => handleFeedback('thumbs_down')}
-                className={`p-2 rounded-full transition-colors ${
+                className={`p-3 rounded-xl transition-all transform hover:scale-110 ${
                   userFeedback === 'thumbs_down' 
-                    ? 'bg-red-500 text-white' 
-                    : 'bg-gray-100 hover:bg-red-100 text-gray-600'
+                    ? 'bg-red-500 text-white shadow-lg' 
+                    : 'bg-gray-100 hover:bg-red-100 text-gray-700 hover:shadow-md'
                 }`}
                 title="Thumbs down - Poor answer"
               >
-                👎
+                <span className="text-xl">👎</span>
               </button>
             </div>
           </div>
           <div className="prose max-w-none">
-            <p className="text-gray-900 whitespace-pre-wrap font-medium">{result.answer}</p>
+            <p className="text-gray-900 whitespace-pre-wrap font-medium text-base leading-relaxed bg-white/50 p-4 rounded-lg border border-gray-200">{result.answer}</p>
           </div>
           
           {result.sources && result.sources.length > 0 && (
-            <div className="mt-6">
-              <h3 className="font-bold mb-3 text-gray-900">Sources:</h3>
-              <div className="space-y-2">
+            <div className="mt-8">
+              <h3 className="font-black text-lg text-gray-900 mb-4 flex items-center gap-2">
+                <span>📚</span>
+                Sources
+              </h3>
+              <div className="grid grid-cols-1 gap-3">
                 {result.sources.map((source: any, idx: number) => (
-                  <div key={idx} className="text-sm border-l-2 border-indigo-300 pl-3 py-1">
-                    <div className="font-semibold text-gray-900">{source.doc_name}</div>
-                    <div className="text-gray-900 text-xs font-medium">{source.chunk_text}</div>
+                  <div 
+                    key={idx} 
+                    className="bg-white/80 border-2 border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all hover:border-blue-300"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-bold text-gray-900">{source.doc_name}</div>
+                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
+                        Score: {source.score.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-700 leading-relaxed">{source.chunk_text}</div>
                   </div>
                 ))}
               </div>
@@ -577,23 +606,33 @@ function LivePerformanceBar({
   color: string; 
   highlighted?: boolean;
 }) {
+  // Calculate width for the progress bar
+  const maxWidth = 300; // Max visible width in pixels
+  const widthPercent = Math.min(100, (time / maxWidth) * 100);
+  
   return (
-    <div className="flex items-center gap-3">
-      <span className={`text-sm w-48 ${highlighted ? 'font-bold' : 'font-semibold'} text-gray-900`}>
+    <div className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+      highlighted ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50 border border-gray-200'
+    }`}>
+      <span className={`text-sm flex-shrink-0 ${highlighted ? 'font-black text-gray-900' : 'font-bold text-gray-800'}`}>
         {label}
       </span>
-      <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+      <div className="flex-1 bg-gray-200 rounded-full h-8 overflow-hidden shadow-inner">
         <div
-          className={`${color} h-full flex items-center justify-end pr-3 transition-all duration-500 ease-out`}
+          className={`${color} h-full flex items-center justify-end pr-4 transition-all duration-700 ease-out shadow-lg`}
           style={{ 
-            width: time < 10 ? '10%' : time < 100 ? '25%' : time < 1000 ? '50%' : '100%',
-            animation: 'slideIn 0.5s ease-out'
+            width: `${widthPercent}%`,
+            animation: 'slideIn 0.7s ease-out'
           }}
         >
-          <span className="text-sm text-white font-bold">{time}ms</span>
+          <span className="text-sm text-white font-black drop-shadow">
+            {time}ms
+          </span>
         </div>
       </div>
-      <span className={`text-sm font-mono w-20 text-right ${highlighted ? 'font-bold text-gray-900' : 'font-medium text-gray-900'}`}>
+      <span className={`text-sm font-mono font-bold min-w-[70px] text-right ${
+        highlighted ? 'text-gray-900' : 'text-gray-700'
+      }`}>
         {time}ms
       </span>
     </div>

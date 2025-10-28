@@ -13,7 +13,7 @@ import asyncio
 from datasets import load_dataset
 from tqdm import tqdm
 from app.core.config import settings
-from app.services.vector_store import MockVectorStore, QdrantVectorStore
+from app.services.vector_store import QdrantVectorStore
 from app.services.document_processor import EmbeddingService
 import uuid
 from datetime import datetime
@@ -37,11 +37,15 @@ async def load_simple_wikipedia(num_articles: int = 1000):
     # Initialize services
     print("[1/6] Initializing services...")
     if settings.use_mock_vector_store:
-        vector_store = MockVectorStore()
-        print("      ⚠️  Using MockVectorStore - data won't persist after restart!")
-    else:
-        vector_store = QdrantVectorStore(settings.qdrant_url, settings.qdrant_api_key)
-        print(f"      ✓ Connected to Qdrant at {settings.qdrant_url}")
+        # Mock store not implemented - use Qdrant instead
+        print("      ⚠️  Mock store requested but not implemented, using Qdrant!")
+    
+    vector_store = QdrantVectorStore(
+        settings.qdrant_url, 
+        settings.qdrant_api_key,
+        cloud_inference=settings.qdrant_cloud_inference
+    )
+    print(f"      ✓ Connected to Qdrant at {settings.qdrant_url}")
     
     print("[2/6] Loading embedding models...")
     embedding_service = EmbeddingService(
@@ -69,8 +73,12 @@ async def load_simple_wikipedia(num_articles: int = 1000):
     doc_collection = "documents"
     
     print("[4/6] Creating Qdrant collections...")
-    await vector_store.create_collection(text_collection, 384)
-    await vector_store.create_collection(doc_collection, 384)
+    # Use 384-dimensional embeddings (matching the embedding service)
+    embedding_dim = 384
+    print(f"      Embedding dimension: {embedding_dim}")
+    
+    await vector_store.create_collection(text_collection, embedding_dim)
+    await vector_store.create_collection(doc_collection, embedding_dim)
     print(f"      ✓ Text collection: {text_collection}")
     print(f"      ✓ Docs collection: {doc_collection}")
     print()
@@ -97,45 +105,34 @@ async def load_simple_wikipedia(num_articles: int = 1000):
             # Generate document ID
             doc_id = str(uuid.uuid4())
             
-            # For this embedded dataset, treat whole article as one chunk
-            # (embeddings are already computed for full articles)
-            if embedding is not None:
-                # Use pre-computed embedding
-                chunks = [{
-                    "text": text,
-                    "chunk_index": 0
-                }]
-                embeddings = [embedding]
-            else:
-                # Fallback: chunk and embed if no pre-computed embedding
-                words = text.split()
-                chunk_size = settings.chunk_size
-                overlap = settings.chunk_overlap
+            # Chunk the text
+            words = text.split()
+            chunk_size = settings.chunk_size
+            overlap = settings.chunk_overlap
+            
+            chunks = []
+            for i in range(0, len(words), chunk_size - overlap):
+                chunk_words = words[i:i + chunk_size]
+                chunk_text = " ".join(chunk_words)
                 
-                chunks = []
-                for i in range(0, len(words), chunk_size - overlap):
-                    chunk_words = words[i:i + chunk_size]
-                    chunk_text = " ".join(chunk_words)
-                    
-                    if len(chunk_text.strip()) > 20:
-                        chunks.append({
-                            "text": chunk_text,
-                            "chunk_index": len(chunks)
-                        })
-                
-                if not chunks:
-                    continue
-                
-                # Generate embeddings for chunks
-                chunk_texts = [chunk["text"] for chunk in chunks]
-                embeddings = embedding_service.embed_text(chunk_texts)
+                if len(chunk_text.strip()) > 20:
+                    chunks.append({
+                        "text": chunk_text,
+                        "chunk_index": len(chunks)
+                    })
+            
+            if not chunks:
+                continue
             
             # Prepare payloads
             payloads = []
             ids = []
-            for chunk, embedding in zip(chunks, embeddings):
-                chunk_id = f"{doc_id}_chunk_{chunk['chunk_index']}"
+            texts = []
+            for chunk in chunks:
+                # Use UUID for point ID (required by cloud inference)
+                chunk_id = str(uuid.uuid4())
                 ids.append(chunk_id)
+                texts.append(chunk["text"])
                 payloads.append({
                     "doc_id": doc_id,
                     "filename": f"{title}.txt",
@@ -145,12 +142,13 @@ async def load_simple_wikipedia(num_articles: int = 1000):
                     "source": "simple_wikipedia"
                 })
             
-            # Upload chunks to vector store
+            # Upload chunks to vector store with cloud inference (pass texts, not vectors)
             await vector_store.upsert_vectors(
                 collection_name=text_collection,
-                vectors=embeddings,
+                vectors=None,  # Will be generated by cloud inference
                 payloads=payloads,
-                ids=ids
+                ids=ids,
+                texts=texts  # Pass texts for cloud embedding
             )
             
             # Store document metadata
