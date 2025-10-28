@@ -14,10 +14,10 @@ groq==0.11.0
 httpx==0.27.2
 
 # Embeddings (text embeddings for RAG)
-# NOTE: If using QDRANT_CLOUD_INFERENCE=true, you can skip these
-#       Qdrant will generate embeddings server-side
-sentence-transformers==3.2.1
-transformers==4.46.2  # Required by sentence-transformers
+# NOTE: With QDRANT_CLOUD_INFERENCE=true (default), Qdrant generates embeddings server-side
+#       Uncomment these only if you need to run WITHOUT cloud inference (local mode)
+# sentence-transformers==3.2.1
+# transformers==4.46.2  # Required by sentence-transformers
 
 # Document Processing
 pypdf2==3.0.1  # PDF fallback parser
