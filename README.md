@@ -2,6 +2,50 @@
 
 A production-ready multimodal RAG (Retrieval-Augmented Generation) system with internet search capabilities, multi-tenancy support, and role-based access control.
 
+## Workshop Setup Commands
+
+First put in new env
+
+### 1. Navigate to backend and create venv with uv
+```bash
+cd backend
+uv venv
+```
+
+### 2. Install dependencies into the venv
+```bash
+uv pip install --python .venv/bin/python -r requirements-workshop.txt
+```
+
+### 3. Load 100 Wikipedia articles
+```bash
+source .venv/bin/activate
+python scripts/load_simple_wikipedia.py --num-articles 100
+```
+
+### 4. Start the backend server
+```bash
+python -m app.main
+```
+
+### 5. Load data (if needed again)
+```bash
+python scripts/load_simple_wikipedia.py --num-articles 100
+python -m app.main
+```
+
+### 6. Start frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### 7. Search!
+Open up localhost:3000 and go to the live search page
+
+---
+
 ## Features
 
 - **Multimodal Knowledge Base**: Support for text (PDF, DOCX, TXT, MD) and images
