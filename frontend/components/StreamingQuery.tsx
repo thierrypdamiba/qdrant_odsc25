@@ -177,75 +177,100 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
   return (
     <div className="space-y-6">
       {/* Query Form */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-shadow">
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="query" className="block text-sm font-semibold text-gray-900 mb-2">
+          <div className="mb-5">
+            <label htmlFor="query" className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <span className="text-lg">💬</span>
               Your Question
             </label>
             <textarea
               id="query"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-4 py-3 text-gray-900 border-2 border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all placeholder:text-gray-400"
               rows={3}
-              placeholder="Ask me anything..."
+              placeholder="Ask me anything... (e.g., 'What is anarchism?')"
               required
               disabled={streaming}
             />
           </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-900 mb-2">
+          <div className="mb-5">
+            <label className="block text-sm font-bold text-gray-900 mb-3">
               Search Mode
             </label>
-            <div className="flex flex-wrap gap-3">
-              <label className="flex items-center">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <label className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                mode === 'auto' 
+                  ? 'border-indigo-500 bg-indigo-50 shadow-md' 
+                  : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50'
+              }`}>
                 <input
                   type="radio"
                   value="auto"
                   checked={mode === 'auto'}
                   onChange={(e) => setMode(e.target.value as any)}
                   disabled={streaming}
-                  className="mr-2"
+                  className="sr-only"
                 />
-                <span className="text-sm font-semibold text-gray-900">🤖 Auto (Watch Agent Decide!)</span>
+                <span className="text-2xl">🤖</span>
+                <span className="text-sm font-bold text-gray-900">Auto</span>
               </label>
               
-              <label className="flex items-center">
+              <label className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                mode === 'local' 
+                  ? 'border-blue-500 bg-blue-50 shadow-md' 
+                  : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50'
+              }`}>
                 <input
                   type="radio"
                   value="local"
                   checked={mode === 'local'}
                   onChange={(e) => setMode(e.target.value as any)}
                   disabled={streaming}
-                  className="mr-2"
+                  className="sr-only"
                 />
-                <span className="text-sm text-gray-900 font-semibold">📚 Local</span>
+                <span className="text-2xl">📚</span>
+                <span className="text-sm font-bold text-gray-900">Local</span>
               </label>
               
-              <label className={`flex items-center ${!permissions?.can_search_internet ? 'opacity-50' : ''}`}>
+              <label className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                !permissions?.can_search_internet ? 'opacity-40 cursor-not-allowed' : ''
+              } ${
+                mode === 'internet' 
+                  ? 'border-green-500 bg-green-50 shadow-md' 
+                  : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50'
+              }`}>
                 <input
                   type="radio"
                   value="internet"
                   checked={mode === 'internet'}
                   onChange={(e) => setMode(e.target.value as any)}
                   disabled={!permissions?.can_search_internet || streaming}
-                  className="mr-2"
+                  className="sr-only"
                 />
-                <span className="text-sm text-gray-900 font-semibold">🌐 Internet</span>
+                <span className="text-2xl">🌐</span>
+                <span className="text-sm font-bold text-gray-900">Internet</span>
               </label>
               
-              <label className={`flex items-center ${!permissions?.can_search_internet ? 'opacity-50' : ''}`}>
+              <label className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                !permissions?.can_search_internet ? 'opacity-40 cursor-not-allowed' : ''
+              } ${
+                mode === 'hybrid' 
+                  ? 'border-purple-500 bg-purple-50 shadow-md' 
+                  : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50'
+              }`}>
                 <input
                   type="radio"
                   value="hybrid"
                   checked={mode === 'hybrid'}
                   onChange={(e) => setMode(e.target.value as any)}
                   disabled={!permissions?.can_search_internet || streaming}
-                  className="mr-2"
+                  className="sr-only"
                 />
-                <span className="text-sm text-gray-900 font-semibold">🔀 Hybrid</span>
+                <span className="text-2xl">🔀</span>
+                <span className="text-sm font-bold text-gray-900">Hybrid</span>
               </label>
             </div>
           </div>
@@ -294,22 +319,30 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               type="submit"
               disabled={streaming}
-              className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-3 px-6 border border-transparent rounded-lg shadow-lg text-base font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98]"
             >
-              {streaming ? 'Processing...' : 'Search (Live Stream)'}
+              {streaming ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                  </svg>
+                  Processing...
+                </span>
+              ) : '🚀 Search (Live Stream)'}
             </button>
             
             {streaming && (
               <button
                 type="button"
                 onClick={handleCancel}
-                className="py-2 px-4 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                className="py-3 px-6 border-2 border-red-400 rounded-lg shadow-md text-base font-bold text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all"
               >
-                Cancel
+                ⛔ Cancel
               </button>
             )}
           </div>
@@ -318,31 +351,47 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
 
       {/* Live Event Stream */}
       {events.length > 0 && (
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <span className={streaming ? 'animate-pulse' : ''}>🔴</span>
-            Agent Workflow {streaming && '(Live)'}
-          </h3>
+        <div className="bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 rounded-xl shadow-2xl p-6 border border-gray-700">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-xl font-bold text-white flex items-center gap-3">
+              <span className={`text-2xl ${streaming ? 'animate-pulse' : ''}`}>
+                {streaming ? '🔴' : '✅'}
+              </span>
+              Agent Workflow
+              {streaming && <span className="text-sm font-normal text-blue-300">(Live)</span>}
+            </h3>
+            {!streaming && events.length > 0 && (
+              <span className="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-bold">
+                Complete
+              </span>
+            )}
+          </div>
           
-          <div className="space-y-2 max-h-96 overflow-y-auto">
+          <div className="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar">
             {events.map((event, idx) => (
-              <div key={idx} className="flex items-start gap-2 text-sm">
-                <span className="text-gray-900 font-mono text-xs font-bold">{idx + 1}.</span>
+              <div 
+                key={idx} 
+                className="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:bg-slate-700/50 transition-all"
+              >
+                <span className="text-indigo-400 font-mono text-sm font-bold min-w-[24px]">{idx + 1}.</span>
                 <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-900 font-semibold">{event.message}</span>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-gray-100 font-medium leading-relaxed">{event.message}</span>
                     {event.time_ms !== undefined && (
-                      <span className="text-xs text-indigo-600 font-mono ml-2 font-bold">
+                      <span className="text-xs text-green-400 font-mono font-bold bg-green-900/30 px-2 py-1 rounded whitespace-nowrap">
                         +{event.time_ms}ms
                       </span>
                     )}
                   </div>
                   {event.quality && (
-                    <div className="text-xs text-gray-900 mt-1 font-semibold">
-                      Score: {(event.quality.overall_score * 100).toFixed(1)}% 
-                      (Vector: {(event.quality.vector_score * 100).toFixed(0)}%, 
-                      Coverage: {(event.quality.coverage * 100).toFixed(0)}%, 
-                      LLM: {(event.quality.llm_confidence * 100).toFixed(0)}%)
+                    <div className="text-xs text-gray-400 mt-2 font-medium bg-slate-900/50 p-2 rounded border border-slate-700">
+                      Score: <span className="text-blue-400 font-bold">{(event.quality.overall_score * 100).toFixed(1)}%</span> 
+                      <span className="mx-1">•</span>
+                      Vector: <span className="text-cyan-400">{(event.quality.vector_score * 100).toFixed(0)}%</span>
+                      <span className="mx-1">•</span>
+                      Coverage: <span className="text-purple-400">{(event.quality.coverage * 100).toFixed(0)}%</span>
+                      <span className="mx-1">•</span>
+                      LLM: <span className="text-green-400">{(event.quality.llm_confidence * 100).toFixed(0)}%</span>
                     </div>
                   )}
                 </div>
@@ -351,9 +400,10 @@ export default function StreamingQuery({ onComplete }: StreamingQueryProps) {
           </div>
           
           {streaming && (
-            <div className="mt-4 flex items-center gap-2 text-sm text-blue-600">
-              <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-              Processing...
+            <div className="mt-5 flex items-center justify-center gap-2 text-sm text-blue-300 font-medium">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-ping"></div>
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+              <span>Processing your query...</span>
             </div>
           )}
         </div>
