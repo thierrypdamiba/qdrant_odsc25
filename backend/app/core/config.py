@@ -31,7 +31,6 @@ class Settings(BaseSettings):
     
     # Embedding Configuration
     text_embedding_model: str = "all-MiniLM-L6-v2"
-    image_embedding_model: str = "openai/clip-vit-base-patch32"
     chunk_size: int = 512
     chunk_overlap: int = 50
     

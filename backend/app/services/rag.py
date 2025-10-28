@@ -39,19 +39,28 @@ class RAGService:
         import time
         timings = {}
         
-        # Generate query embedding
-        import asyncio
-        embed_start = time.time()
-        loop = asyncio.get_event_loop()
-        query_vector = await loop.run_in_executor(
-            None,
-            self.embedding_service.embed_text_query,
-            query
-        )
-        timings['embedding_ms'] = int((time.time() - embed_start) * 1000)
-        
-        # Search vector store
         collection_name = f"{self.org_id}_text"
+        
+        # Check if using cloud inference
+        use_cloud = hasattr(self.vector_store, 'cloud_inference') and self.vector_store.cloud_inference
+        
+        if use_cloud:
+            # Cloud inference: Qdrant generates embeddings server-side
+            # No local embedding needed!
+            print(f"[RAG] Using cloud inference - sending query text to Qdrant")
+            query_vector = []  # Not used
+            timings['embedding_ms'] = 0  # No local embedding time
+        else:
+            # Generate query embedding locally
+            import asyncio
+            embed_start = time.time()
+            loop = asyncio.get_event_loop()
+            query_vector = await loop.run_in_executor(
+                None,
+                self.embedding_service.embed_text_query,
+                query
+            )
+            timings['embedding_ms'] = int((time.time() - embed_start) * 1000)
         
         # Apply filters
         filter_conditions = {}
@@ -67,7 +76,8 @@ class RAGService:
             top_k=top_k,
             filter_conditions=filter_conditions,
             use_mmr=use_mmr,
-            diversity=diversity
+            diversity=diversity,
+            query_text=query if use_cloud else None  # Pass text for cloud inference
         )
         timings['qdrant_search_ms'] = int((time.time() - search_start) * 1000)
         

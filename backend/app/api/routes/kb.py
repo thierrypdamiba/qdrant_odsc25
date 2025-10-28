@@ -19,10 +19,7 @@ router = APIRouter(prefix="/kb", tags=["knowledge-base"])
 
 # Initialize services
 doc_processor = DocumentProcessor(settings.upload_dir)
-embedding_service = EmbeddingService(
-    settings.text_embedding_model,
-    settings.image_embedding_model
-)
+embedding_service = EmbeddingService(settings.text_embedding_model)
 
 
 async def get_vector_store() -> QdrantVectorStore:
@@ -78,34 +75,61 @@ async def process_document_background(
             )
             return
         
-        # Generate embeddings
-        chunk_texts = [chunk["text"] for chunk in chunks]
-        embeddings = embedding_service.embed_text(chunk_texts)
-        
-        # Store in vector store
+        # Prepare data for storage
         text_collection = f"{settings.org_id}_text"
-        await vector_store.create_collection(text_collection, len(embeddings[0]))
         
-        # Prepare payloads
-        payloads = []
-        ids = []
-        for chunk, embedding in zip(chunks, embeddings):
-            chunk_id = f"{doc_id}_chunk_{chunk['chunk_index']}"
-            ids.append(chunk_id)
-            payloads.append({
-                "doc_id": doc_id,
-                "filename": filename,
-                "content": chunk["text"],
-                "chunk_index": chunk["chunk_index"],
-                "tags": tags
-            })
-        
-        await vector_store.upsert_vectors(
-            collection_name=text_collection,
-            vectors=embeddings,
-            payloads=payloads,
-            ids=ids
-        )
+        # If using cloud inference, Qdrant will generate embeddings server-side
+        if vector_store.cloud_inference:
+            # Just pass the raw text - Qdrant will embed it
+            chunk_texts = [chunk["text"] for chunk in chunks]
+            payloads = []
+            ids = []
+            for chunk in chunks:
+                chunk_id = f"{doc_id}_chunk_{chunk['chunk_index']}"
+                ids.append(chunk_id)
+                payloads.append({
+                    "doc_id": doc_id,
+                    "filename": filename,
+                    "content": chunk["text"],
+                    "chunk_index": chunk["chunk_index"],
+                    "tags": tags
+                })
+            
+            await vector_store.create_collection(text_collection)
+            await vector_store.upsert_vectors(
+                collection_name=text_collection,
+                vectors=[],  # Empty - using cloud inference
+                payloads=payloads,
+                ids=ids,
+                texts=chunk_texts  # Pass text for cloud embedding
+            )
+        else:
+            # Generate embeddings locally
+            chunk_texts = [chunk["text"] for chunk in chunks]
+            embeddings = embedding_service.embed_text(chunk_texts)
+            
+            await vector_store.create_collection(text_collection, len(embeddings[0]))
+            
+            # Prepare payloads
+            payloads = []
+            ids = []
+            for chunk, embedding in zip(chunks, embeddings):
+                chunk_id = f"{doc_id}_chunk_{chunk['chunk_index']}"
+                ids.append(chunk_id)
+                payloads.append({
+                    "doc_id": doc_id,
+                    "filename": filename,
+                    "content": chunk["text"],
+                    "chunk_index": chunk["chunk_index"],
+                    "tags": tags
+                })
+            
+            await vector_store.upsert_vectors(
+                collection_name=text_collection,
+                vectors=embeddings,
+                payloads=payloads,
+                ids=ids
+            )
         
         # Update document status to completed
         await vector_store.upsert_vectors(

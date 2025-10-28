@@ -42,10 +42,7 @@ async def get_services():
         _llm_service = GroqLLMService(settings.groq_api_key)
         _search_service = PerplexitySearchService(settings.perplexity_api_key)
         
-        _embedding_service = EmbeddingService(
-            settings.text_embedding_model,
-            settings.image_embedding_model
-        )
+        _embedding_service = EmbeddingService(settings.text_embedding_model)
         
         _rag_service = RAGService(
             vector_store=_vector_store,

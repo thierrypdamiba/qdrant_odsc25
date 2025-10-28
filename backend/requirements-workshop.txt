@@ -1,6 +1,10 @@
 # Workshop-Optimized Requirements
-# This file contains the same packages as requirements.txt but organized by purpose
-# Installation time: ~2-3 minutes
+# This file contains the packages needed to run the app AND load data
+# Installation time: ~2-3 minutes (faster than full requirements)
+#
+# NOTE: This assumes QDRANT_CLOUD_INFERENCE=true
+#       Cloud inference means Qdrant generates embeddings server-side
+#       So we don't need sentence-transformers locally!
 
 # Core Framework
 fastapi==0.115.0
@@ -18,17 +22,22 @@ groq==0.11.0
 httpx==0.27.2
 
 # Embeddings (for semantic search)
-sentence-transformers==3.2.1
-transformers==4.46.2
+# When using Qdrant Cloud Inference, you DON'T need these - Qdrant embeds server-side
+# Uncomment these only if setting QDRANT_CLOUD_INFERENCE=false
+# sentence-transformers==3.2.1  # Only needed if not using cloud inference
+# transformers==4.46.2  # Required dependency of sentence-transformers
 
-# Data Loading (for workshop - loads Wikipedia articles)
-datasets==3.1.0
+# Data Loading (for workshop scripts - loads Wikipedia articles)
+datasets==3.1.0  # HuggingFace datasets (pulls in pandas as dependency)
 tqdm==4.66.5
-pandas==2.2.3
+# pandas==2.2.3  # Only needed for parquet loading scripts (not used in workshop)
 
 # Document Processing (for file uploads)
 pypdf2==3.0.1  # PDF fallback parser
 python-docx==1.1.2  # Word documents
 pdfplumber==0.11.4  # Primary PDF parser
-pillow==11.0.0  # Image processing
 
+# NOTE: These are commented out because they're not directly used:
+# pillow==11.0.0  # Image embeddings exist in code but embed_image() is never called
+# torch  # Pulled in by sentence-transformers dependency (only used in unused embed_image methods)
+# pandas==2.2.3  # Pulled in by datasets dependency (not needed for workshop data loading)

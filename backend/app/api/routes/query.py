@@ -37,10 +37,7 @@ async def get_agent_service() -> AgenticRAG:
         search_service = MockSearchService()
     
     # Embedding service
-    embedding_service = EmbeddingService(
-        settings.text_embedding_model,
-        settings.image_embedding_model
-    )
+    embedding_service = EmbeddingService(settings.text_embedding_model)
     
     # RAG service
     rag_service = RAGService(

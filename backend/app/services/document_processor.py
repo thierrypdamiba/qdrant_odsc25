@@ -116,18 +116,14 @@ class DocumentProcessor:
 
 
 class EmbeddingService:
-    """Generate embeddings for text and images"""
+    """Generate embeddings for text"""
     
     def __init__(
         self,
-        text_model_name: str = "all-MiniLM-L6-v2",
-        image_model_name: str = "openai/clip-vit-base-patch32"
+        text_model_name: str = "all-MiniLM-L6-v2"
     ):
         self.text_model_name = text_model_name
-        self.image_model_name = image_model_name
         self._text_model = None
-        self._image_model = None
-        self._image_processor = None
     
     def _load_text_model(self):
         """Lazy load text embedding model"""
@@ -140,14 +136,6 @@ class EmbeddingService:
             load_time = int((time.time() - load_start) * 1000)
             print(f"[EMBEDDING] Model loaded in: {load_time}ms")
         return self._text_model
-    
-    def _load_image_model(self):
-        """Lazy load image embedding model"""
-        if self._image_model is None:
-            from transformers import CLIPProcessor, CLIPModel
-            self._image_model = CLIPModel.from_pretrained(self.image_model_name)
-            self._image_processor = CLIPProcessor.from_pretrained(self.image_model_name)
-        return self._image_model, self._image_processor
     
     def embed_text(self, texts: List[str]) -> List[List[float]]:
         """Generate embeddings for text"""
@@ -162,39 +150,5 @@ class EmbeddingService:
     def embed_text_query(self, query: str) -> List[float]:
         """Generate embedding for a single query"""
         return self.embed_text([query])[0]
-    
-    def embed_image(self, image_path: str) -> List[float]:
-        """Generate embedding for an image"""
-        from PIL import Image
-        import torch
-        
-        model, processor = self._load_image_model()
-        
-        image = Image.open(image_path)
-        inputs = processor(images=image, return_tensors="pt")
-        
-        with torch.no_grad():
-            image_features = model.get_image_features(**inputs)
-        
-        # Normalize
-        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
-        
-        return image_features.squeeze().tolist()
-    
-    def embed_image_from_text(self, text: str) -> List[float]:
-        """Generate image embedding from text description (for text-to-image search)"""
-        import torch
-        
-        model, processor = self._load_image_model()
-        
-        inputs = processor(text=[text], return_tensors="pt", padding=True)
-        
-        with torch.no_grad():
-            text_features = model.get_text_features(**inputs)
-        
-        # Normalize
-        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-        
-        return text_features.squeeze().tolist()
 
 
