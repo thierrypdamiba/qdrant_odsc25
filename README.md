@@ -1,5 +1,7 @@
 # Agentic RAG System
 
+https://docs.google.com/document/d/1dxoiYe2fKqOdP9dhrY9y3IhFjHTPQwQIBcEecTtg10w/edit?usp=sharing
+
 A production-ready multimodal RAG (Retrieval-Augmented Generation) system with internet search capabilities, multi-tenancy support, and role-based access control.
 
 ## Workshop Setup Commands
