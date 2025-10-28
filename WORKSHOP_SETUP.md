@@ -2,6 +2,10 @@
 
 This guide will walk you through setting up and running the Agentic RAG system for the workshop.
 
+## ⚠️ Workshop Notice
+
+**IMPORTANT**: For the workshop, please load **only 100 articles** to keep data loading fast and manageable. The workshop cluster is shared, so loading too many articles will slow things down for everyone.
+
 ## Prerequisites
 
 - Python 3.8+ installed
@@ -87,6 +91,8 @@ pip install -r requirements.txt
 
 ## Step 4: Load Sample Data
 
+**IMPORTANT**: Load only 100 articles for the workshop.
+
 Before running the application, we need to load some sample data into the Qdrant collection:
 
 ```bash
@@ -95,7 +101,11 @@ cd backend
 source venv/bin/activate
 
 # Load 100 Wikipedia articles (this takes about 30-60 seconds)
+# Note: The default is now set to 100 articles, so you can run without --num-articles
 python scripts/load_simple_wikipedia.py --num-articles 100
+
+# Or simply:
+python scripts/load_simple_wikipedia.py
 ```
 
 You should see output like:

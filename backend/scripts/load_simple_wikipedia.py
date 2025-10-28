@@ -239,8 +239,8 @@ def main():
     parser.add_argument(
         "--num-articles",
         type=int,
-        default=1000,
-        help="Number of articles to load (default: 1000)"
+        default=100,  # Changed to 100 for workshop
+        help="Number of articles to load (default: 100)"
     )
     
     args = parser.parse_args()
